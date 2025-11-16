@@ -46,12 +46,14 @@ db.serialize(() => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_cards_menu_id ON cards(menu_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_cards_sub_menu_id ON cards(sub_menu_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_cards_order ON cards("order")`);
+  
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
   )`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)`);
+  
   db.run(`CREATE TABLE IF NOT EXISTS ads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     position TEXT NOT NULL, -- left/right
@@ -59,6 +61,7 @@ db.serialize(() => {
     url TEXT NOT NULL
   )`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_ads_position ON ads(position)`);
+  
   db.run(`CREATE TABLE IF NOT EXISTS friends (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -66,6 +69,21 @@ db.serialize(() => {
     logo TEXT
   )`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_friends_title ON friends(title)`);
+
+  // --- START: 网站设置表 ---
+  db.run(`CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY NOT NULL,
+    value TEXT
+  )`);
+  
+  // 插入默认的设置值 (如果它们不存在)
+  const settingsStmt = db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)");
+  settingsStmt.run('bg_url_pc', '');      // 电脑端背景图 URL
+  settingsStmt.run('bg_url_mobile', ''); // 手机端背景图 URL
+  settingsStmt.run('bg_opacity', '0.15'); // 默认值 0.15
+  settingsStmt.run('custom_css', '/* 自定义样式 */'); // 添加 custom_css 默认值
+  settingsStmt.finalize();
+  // --- END: 网站设置表 ---
 
   // 检查菜单表是否为空，若为空则插入默认菜单
   db.get('SELECT COUNT(*) as count FROM menus', (err, row) => {
@@ -287,9 +305,10 @@ db.serialize(() => {
     }
   });
 
+  // 添加用户登录信息列
   db.run(`ALTER TABLE users ADD COLUMN last_login_time TEXT`, [], () => {});
   db.run(`ALTER TABLE users ADD COLUMN last_login_ip TEXT`, [], () => {});
 });
 
 
-module.exports = db; 
+module.exports = db;
