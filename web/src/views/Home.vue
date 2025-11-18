@@ -149,9 +149,49 @@ const settings = ref({
   bg_url_mobile: '',
   bg_opacity: '1',
   glass_opacity: '1', 
-  custom_css: '',
-  text_color_mode: 'auto'
+  text_color_mode: 'auto',
+  custom_code: ''
 });
+
+function applyCustomCode(code) {
+  if (typeof window === 'undefined') return;
+
+  const containerId = 'nav-custom-code-container';
+  const inlineScriptId = 'nav-custom-inline-script';
+
+  const oldContainer = document.getElementById(containerId);
+  if (oldContainer) oldContainer.remove();
+
+  const oldInlineScript = document.getElementById(inlineScriptId);
+  if (oldInlineScript) oldInlineScript.remove();
+
+  if (!code || !code.trim()) return;
+
+  // 纯 JS（没有任何标签）时，直接当脚本执行
+  if (!code.includes('<')) {
+    const script = document.createElement('script');
+    script.id = inlineScriptId;
+    script.textContent = code;
+    document.body.appendChild(script);
+    return;
+  }
+
+  // 含 HTML / style / script 的情况
+  const wrapper = document.createElement('div');
+  wrapper.id = containerId;
+  wrapper.innerHTML = code;
+  document.body.appendChild(wrapper);
+
+  const scripts = wrapper.querySelectorAll('script');
+  scripts.forEach(oldScript => {
+    const newScript = document.createElement('script');
+    Array.from(oldScript.attributes).forEach(attr => {
+      newScript.setAttribute(attr.name, attr.value);
+    });
+    newScript.textContent = oldScript.textContent || '';
+    oldScript.parentNode.replaceChild(newScript, oldScript);
+  });
+}
 
 const backgroundStyles = computed(() => {
   const pcUrl = settings.value.bg_url_pc;
@@ -258,8 +298,7 @@ const searchEngines = [
   }
 ];
 
-const selectedEngine = ref(searchEngines[0]); // 现在默认就是“站内”
-
+const selectedEngine = ref(searchEngines[0]);
 
 function selectEngine(engine) {
   selectedEngine.value = engine;
@@ -299,7 +338,15 @@ onMounted(async () => {
   window.addEventListener('resize', handleResize);
 
   getSettings().then(res => {
-    settings.value = { ...settings.value, ...res.data };
+    const data = res.data || {};
+    settings.value = {
+      ...settings.value,
+      ...data
+    };
+    // 兼容老版本：如果没有 custom_code，但有 custom_css，就用 custom_css
+    if (!settings.value.custom_code && data.custom_css) {
+      settings.value.custom_code = data.custom_css || '';
+    }
   }).catch(err => {
     console.error("加载网站设置失败:", err);
   });
@@ -338,20 +385,13 @@ watch(
   { deep: true }
 );
 
-watch(() => settings.value.custom_css, (newCss) => {
-  const styleId = 'custom-nav-style';
-  let styleTag = document.getElementById(styleId);
-  
-  if (!styleTag) {
-    styleTag = document.createElement('style');
-    styleTag.id = styleId;
-    document.head.appendChild(styleTag);
-  }
-  
-  styleTag.textContent = newCss || '';
-}, {
-  immediate: true 
-});
+watch(
+  () => settings.value.custom_code,
+  (newCode) => {
+    applyCustomCode(newCode || '');
+  },
+  { immediate: true }
+);
 
 async function selectMenu(menu, parentMenu = null) {
   searchQuery.value = '';
@@ -560,7 +600,6 @@ function handleLogoError(event) {
   background: #eeeeee;
 }
 
-/* 后台按钮：不参与 active/hover 的高亮，避免返回时看起来被选中 */
 .engine-btn.admin-btn,
 .engine-btn.admin-btn:hover,
 .engine-btn.admin-btn:active,
@@ -610,7 +649,6 @@ function handleLogoError(event) {
   justify-content: center;
   cursor: pointer;
   transition: background 0.2s;
-  margin-right: 0.1rem;
 }
 
 .search-btn:hover {
@@ -906,17 +944,14 @@ function handleLogoError(event) {
   margin: 0 auto;
 }
 
-/* 深蒙版时：被选中的搜索引擎文字保持黑色 */
 .home-container.is-dark-overlay .engine-btn.active {
   color: #000000 !important;
 }
 
-/* 始终白色模式下：被选中的搜索引擎文字保持黑色 */
 .home-container.text-mode-white .engine-btn.active {
   color: #000000 !important;
 }
 
-/* 深蒙版时：搜索框内文字为白色，placeholder 浅白 */
 .home-container.is-dark-overlay .search-input {
   color: #ffffff !important;
 }
@@ -925,13 +960,11 @@ function handleLogoError(event) {
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
-/* 深蒙版时：二级菜单文字保持黑色 */
 .home-container.is-dark-overlay :deep(.sub-menu),
 .home-container.is-dark-overlay :deep(.sub-menu-item) {
   color: #000000 !important;
 }
 
-/* 始终白色模式下：二级菜单文字保持黑色 */
 .home-container.text-mode-white :deep(.sub-menu),
 .home-container.text-mode-white :deep(.sub-menu-item) {
   color: #000000 !important;

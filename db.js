@@ -81,6 +81,7 @@ db.serialize(() => {
   settingsStmt.run('glass_opacity', '0.7');
   settingsStmt.run('custom_css', '/* 自定义样式 */');
   settingsStmt.run('font_color_mode', 'auto');
+  settingsStmt.run('custom_code', '');
   settingsStmt.finalize();
 
   db.get('SELECT COUNT(*) as count FROM menus', (err, row) => {

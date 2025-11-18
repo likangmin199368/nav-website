@@ -61,13 +61,11 @@
       </div>
 
       <div class="form-row">
-        <label class="form-label">自定义 CSS</label>
+        <label class="form-label">自定义代码（HTML / CSS / JS）</label>
         <textarea
-          v-model="form.custom_css"
+          v-model="form.custom_code"
           class="textarea"
-          rows="8"
-          placeholder="可以在这里写自定义 CSS，例如：
-.home-container { font-size: 15px; }"
+          rows="10"
         ></textarea>
       </div>
 
@@ -90,8 +88,8 @@ const form = ref({
   bg_url_mobile: '',
   bg_opacity: 1,
   glass_opacity: 1,
-  custom_css: '',
-  text_color_mode: 'auto'
+  text_color_mode: 'auto',
+  custom_code: ''
 });
 
 const saving = ref(false);
@@ -104,7 +102,6 @@ onMounted(async () => {
 
     form.value.bg_url_pc = data.bg_url_pc || '';
     form.value.bg_url_mobile = data.bg_url_mobile || '';
-    form.value.custom_css = data.custom_css || '';
     form.value.text_color_mode = data.text_color_mode || 'auto';
 
     const bgOp = parseFloat(data.bg_opacity);
@@ -112,6 +109,8 @@ onMounted(async () => {
 
     const glassOp = parseFloat(data.glass_opacity);
     form.value.glass_opacity = isNaN(glassOp) ? 1 : glassOp;
+
+    form.value.custom_code = data.custom_code || '';
   } catch (e) {
     console.error('加载设置失败', e);
   }
@@ -128,8 +127,8 @@ async function handleSave() {
       bg_url_mobile: form.value.bg_url_mobile,
       bg_opacity: String(form.value.bg_opacity),
       glass_opacity: String(form.value.glass_opacity),
-      custom_css: form.value.custom_css,
-      text_color_mode: form.value.text_color_mode
+      text_color_mode: form.value.text_color_mode,
+      custom_code: form.value.custom_code
     };
 
     await updateSettings(payload);
@@ -203,6 +202,7 @@ async function handleSave() {
   font-family: Consolas, Menlo, Monaco, monospace;
   resize: vertical;
   box-sizing: border-box;
+  white-space: pre;
 }
 
 .range-row {
