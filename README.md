@@ -60,8 +60,7 @@ nav-item/
 │   ├── vite.config.mjs    # Vite 配置文件
 │   ├── index.html         # HTML 入口文件
 │   ├── public/            # 静态资源
-│   │   ├── background.webp
-│   │   ├── default-favicon.png
+│   │   ├── icon.png
 │   │   └── robots.txt
 │   └── src/               # 前端源码
 │       ├── main.js        # Vue 应用入口
@@ -201,6 +200,7 @@ bash <(curl -Ls https://github.com/eooce/nav-item/releases/download/ct8-and-serv
 ---
 
 ⭐ 如果这个项目对你有帮助，请给它一个星标！ 
+
 
 
 
