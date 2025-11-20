@@ -2,7 +2,7 @@
 
 ## 项目简介
 
-一个现代化的导航网站项目，提供简洁美观的导航界面和强大的后台管理系统,快速访问常用网站和工具。
+一个现代化的导航网站项目，提供简洁美观的导航界面和强大的后台管理系统,在原项目基础上进行大量优化，快速访问常用网站和工具。
 
 ## 🛠️ 技术栈
 - Vue 3 + Node.js + SQLite 前后端分离架构
@@ -24,6 +24,9 @@
 - 📢 **广告管理**：广告位的增删改查
 - 🔗 **友链管理**：友情链接的增删改查
 - 📊 **数据统计**：登录时间、IP等统计信息
+- 🖼 **图片上传管理**：支持备注，图片链接
+- 🎨 **外观设置**：支持（背景图、透明度、字体颜色模式、自定义代码）
+- 📦 **数据备份与恢复**：一键备份与恢复数据
 
 ### 技术特性
 - 🔐 **JWT认证**：安全的用户认证机制
@@ -60,14 +63,15 @@ nav-item/
 │   ├── vite.config.mjs    # Vite 配置文件
 │   ├── index.html         # HTML 入口文件
 │   ├── public/            # 静态资源
-│   │   ├── background.webp
-│   │   ├── default-favicon.png
+│   │   ├── icon.png
 │   │   └── robots.txt
 │   └── src/               # 前端源码
 │       ├── main.js        # Vue 应用入口
 │       ├── router.js      # 路由配置
 │       ├── api.js         # API 接口封装（含 getSettings / saveSettings / backup 等）
 │       ├── App.vue        # 根组件
+│       ├── assets/
+│       │   └── main.css
 │       ├── components/    # 公共组件
 │       │   ├── MenuBar.vue
 │       │   └── CardGrid.vue
@@ -95,7 +99,7 @@ nav-item/
 - `ADMIN_PASSWORD`: 管理员密码（默认: 123456）
 
 ### 数据库配置
-系统使用 SQLite 数据库，数据库文件会自动创建在项目/database/目录下，使用docker部署请挂载/app/database目录实现数据持久化
+系统使用 SQLite 数据库，数据库文件会自动创建在项目/database/目录下，使用docker部署请挂载/app/database目录和/app/uploads目录实现数据持久化
 ```
 
 ## 🚀 部署指南
@@ -104,7 +108,7 @@ nav-item/
 
 #### 1. 克隆项目
 ```bash
-git clone https://github.com/eooce/nav-Item.git
+git clone https://github.com/LeoJyenn/nav-item
 cd nav-item
 ```
 
@@ -134,14 +138,13 @@ cd .. && npm start
 #### 1：docker快速部署
    ```bash
    docker run -d \
-     --name nav-item \
-     -p 3000:3000 \
-     -v $(pwd)/database:/app/database \
-     -v $(pwd)/uploads:/app/uploads \
-     -e NODE_ENV=production \
-     -e ADMIN_USERNAME=admin \
-     -e ADMIN_PASSWORD=123456 \
-     eooce/nav-item
+  --name nav-item \
+  -p 3000:3000 \
+  -v $(pwd)/database:/app/database \
+  -v $(pwd)/uploads:/app/uploads \
+  -e ADMIN_USERNAME=admin \
+  -e ADMIN_PASSWORD=123456 \
+  leojyenn/nav-item:latest
    ```
 ### 2: docker-compose.yaml 部署
 ```bash
@@ -149,34 +152,26 @@ version: '3'
 
 services:
   nav-item:
-    image: eooce/nav-item
+    image: leojyenn/nav-item:latest
     container_name: nav-item
     ports:
       - "3000:3000"
     environment:
-      - PORT=3000             # 监听端口
-      - ADMIN_USERNAME=admin  # 后台用户名
-      - ADMIN_PASSWORD=123456 # 后台密码
+      - PORT=3000
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=123456
     volumes:
-      - ./database:/app/database  # 持久化数据库
+      - ./database:/app/database
+      - ./uploads:/app/uploads
     restart: unless-stopped
 ```
 ### 3: docker容器等使用docker image配合环境变量部署
 ```bash
-eooce/nav-item
+leojyenn/nav-item:latest
 ```
 或
 ```bash
-ghcr.io/eooce/nav-item:latest
-```
-
-## serv00|ct8|Hostuno 一键安装脚本
-- 环境变量,放在脚本前，随脚本一起运行，英文空隔隔开
-- 后台管理用户名和密码默认分别为为`admin`和`123456`
-  * `DOMAIN`为自定义站点域名
-
-```bash
-bash <(curl -Ls https://github.com/eooce/nav-item/releases/download/ct8-and-serv00/install.sh) 
+ghcr.io/leojyenn/nav-item:latest
 ```
 
 ## 🤝 贡献指南
@@ -195,6 +190,9 @@ bash <(curl -Ls https://github.com/eooce/nav-item/releases/download/ct8-and-serv
 
 **eooce** - [GitHub](https://github.com/eooce)
 
+
+**LeoJyenn** - [GitHub](https://github.com/LeoJyenn)
+
 ## 🙏 致谢
 
 感谢所有为这个项目做出贡献的开发者！
@@ -202,6 +200,9 @@ bash <(curl -Ls https://github.com/eooce/nav-item/releases/download/ct8-and-serv
 ---
 
 ⭐ 如果这个项目对你有帮助，请给它一个星标！ 
+
+
+
 
 
 
