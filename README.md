@@ -70,7 +70,7 @@ nav-item/
 │       ├── router.js      # 路由配置
 │       ├── api.js         # API 接口封装（含 getSettings / saveSettings / backup 等）
 │       ├── App.vue        # 根组件
-│       ├── assets
+│       ├── assets/
 │       │   └── main.css
 │       ├── components/    # 公共组件
 │       │   ├── MenuBar.vue
@@ -200,6 +200,7 @@ ghcr.io/leojyenn/nav-item:latest
 ---
 
 ⭐ 如果这个项目对你有帮助，请给它一个星标！ 
+
 
 
 
