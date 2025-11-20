@@ -61,9 +61,8 @@
       <div class="form-row">
         <label class="form-label">字体颜色模式</label>
         <select v-model="form.text_color_mode" class="select">
-          <option value="auto">自动（根据背景蒙版透明度）</option>
-          <option value="black">始终黑色</option>
-          <option value="white">始终白色</option>
+          <option value="black">黑色</option>
+          <option value="white">白色</option>
         </select>
       </div>
 
@@ -95,7 +94,7 @@ const form = ref({
   bg_url_mobile: '',
   bg_opacity: 1,
   glass_opacity: 1,
-  text_color_mode: 'auto',
+  text_color_mode: 'black',
   custom_code: ''
 });
 
@@ -109,7 +108,7 @@ onMounted(async () => {
 
     form.value.bg_url_pc = data.bg_url_pc || '';
     form.value.bg_url_mobile = data.bg_url_mobile || '';
-    form.value.text_color_mode = data.text_color_mode || 'auto';
+    form.value.text_color_mode = data.text_color_mode || 'black';
 
     const bgOp = parseFloat(data.bg_opacity);
     form.value.bg_opacity = isNaN(bgOp) ? 1 : bgOp;
@@ -161,7 +160,6 @@ async function handleSave() {
   box-sizing: border-box;
 }
 
-/* 顶部渐变头部，和其它管理页保持一致 */
 .settings-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px 12px 0 0;
@@ -190,7 +188,6 @@ async function handleSave() {
   opacity: 0.9;
 }
 
-/* 设置卡片紧挨着头部，整体像一张卡片 */
 .settings-card {
   background: #ffffff;
   border-radius: 0 0 12px 12px;
