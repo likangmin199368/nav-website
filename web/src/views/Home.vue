@@ -512,6 +512,11 @@ function handleLogoError(event) {
   color: var(--global-text-color, #000) !important;
 }
 
+.modal-content,
+.modal-content * {
+  color: #000000 !important;
+}
+
 .home-container::before {
   content: '';
   position: fixed;
