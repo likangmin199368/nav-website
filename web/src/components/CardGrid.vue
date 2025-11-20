@@ -169,11 +169,13 @@ function truncate(str) {
   }
 }
 
-.link-item:hover {
-  background-color: rgba(var(--glass-color-rgb, 255, 255, 255), var(--glass-opacity-hover, 0.75));
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+@media (hover: hover) and (pointer: fine) {
+  .link-item:hover {
+    background-color: rgba(var(--glass-color-rgb, 255, 255, 255), var(--glass-opacity-hover, 0.75));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
 }
-
+  
 .link-item a {
   text-decoration: none;
   color: #000;
@@ -251,3 +253,4 @@ function truncate(str) {
   }
 }
 </style>
+
