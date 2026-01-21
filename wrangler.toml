@@ -1,0 +1,17 @@
+name = "nav-item"
+compatibility_date = "2025-01-21"
+pages_build_output_dir = "web/dist"
+[vars]
+# 可在 Cloudflare Pages 项目设置中覆盖
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nav-item"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "nav-item-uploads"
+
+

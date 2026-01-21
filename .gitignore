@@ -1,0 +1,12 @@
+node_modules/
+web/dist/
+dist/
+.wrangler/
+.miniflare/
+.env
+.env.*
+*.log
+*.err
+*.pid
+*.cache
+*.tmp

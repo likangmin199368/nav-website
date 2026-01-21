@@ -1,203 +1,154 @@
-# Nav-item - 个人导航站
+# Nav-Item (Cloudflare Pages)
 
-## 项目简介
+现代化导航站点，前端为 Vue 3 SPA，后端为 Cloudflare Pages Functions（Hono），数据使用 D1，上传使用 R2。
 
-一个现代化的导航网站项目，提供简洁美观的导航界面和强大的后台管理系统,快速访问常用网站和工具。
-
-## 🛠️ 技术栈
-- Vue 3 + Node.js + SQLite 前后端分离架构
-
-## ✨ 主要功能
-
-### 前端功能
-- 🏠 **首页导航**：美观的卡片式导航界面
-- 🔍 **聚合搜索**：支持 Google、百度、Bing、GitHub、站内搜索
-- 📱 **响应式设计**：完美适配桌面端和移动端
-- 🎨 **现代化UI**：采用渐变背景和毛玻璃效果
-- 🔗 **友情链接**：支持友情链接展示
-- 📢 **广告位**：支持左右两侧广告位展示
-
-### 后台管理功能
-- 👤 **用户管理**：管理员登录、用户信息管理
-- 📋 **栏目管理**：主菜单和子菜单的增删改查
-- 🃏 **卡片管理**：导航卡片的增删改查
-- 📢 **广告管理**：广告位的增删改查
-- 🔗 **友链管理**：友情链接的增删改查
-- 📊 **数据统计**：登录时间、IP等统计信息
-
-### 技术特性
-- 🔐 **JWT认证**：安全的用户认证机制
-- 🗄️ **SQLite数据库**：轻量级数据库，无需额外配置
-- 📤 **文件上传**：支持图片上传功能
-- 🔍 **搜索功能**：支持站内搜索和外部搜索
-- 📱 **移动端适配**：完美的移动端体验
-
-## 🏗️ 项目结构
+## 项目结构
 
 ```
 nav-item/
-├── app.js                 # 后端主入口文件
-├── config.js             # 配置文件
-├── db.js                 # 数据库初始化
-├── package.json          # 后端依赖配置
-├── database/             # 数据库文件目录
-│   └── nav.db           # SQLite数据库文件
-├── routes/               # 后端路由
-│   ├── auth.js          # 认证相关路由
-│   ├── menu.js          # 菜单管理路由
-│   ├── card.js          # 卡片管理路由
-│   ├── ad.js            # 广告管理路由
-│   ├── friend.js        # 友链管理路由
-│   ├── user.js          # 用户管理路由
-│   └── upload.js        # 文件上传路由
-├── uploads/              # 上传文件目录
-│   └── default-favicon.png
-├── web/                  # 前端项目目录
-│    ├── package.json      # 前端依赖配置
-│    ├── vite.config.mjs   # Vite配置文件
-│    ├── index.html        # HTML入口文件
-│    ├── public/           # 静态资源
-│    │   ├── background.webp
-│    │   ├── default-favicon.png
-│    │   └── robots.txt
-│    └── src/              # 前端源码
-│        ├── main.js       # Vue应用入口
-│        ├── router.js     # 路由配置
-│        ├── api.js        # API接口封装
-│        ├── App.vue       # 根组件
-│        ├── components/   # 公共组件
-│        │   ├── MenuBar.vue
-│        │   └── CardGrid.vue
-│        └── views/        # 页面组件
-│            ├── Home.vue  # 首页
-│            ├── Admin.vue # 后台管理
-│            └── admin/    # 后台管理子页面
-│                ├── MenuManage.vue
-│                ├── CardManage.vue
-│               ├── AdManage.vue
-│               ├── FriendLinkManage.vue
-│               └── UserManage.vue
-├── Dockerfile # Docker构建文件
+├── functions/            # Pages Functions (ESM JS)
+│   ├── api/[[path]].js   # API 路由
+│   └── uploads/[[key]].js# R2 文件读取
+├── migrations/           # D1 迁移
+│   ├── 0001_init.sql
+│   └── seed.sql          # 可选数据
+├── scripts/              # 本地脚本
+│   └── smoke-test.mjs
+├── web/                  # Vue 3 前端
+│   ├── public/_redirects # SPA 重写
+│   └── src/
+├── wrangler.toml
+└── package.json
 ```
 
-## ⚙️ 环境变量及配置说明
+## 本地开发
 
-### 环境变量
-- `PORT`: 服务器端口号（默认: 3000）
-- `ADMIN_USERNAME`: 管理员用户名（默认: admin）
-- `ADMIN_PASSWORD`: 管理员密码（默认: 123456）
-
-### 数据库配置
-系统使用 SQLite 数据库，数据库文件会自动创建在项目/database/目录下，使用docker部署请挂载/app/database目录实现数据持久化
-```
-
-## 🚀 部署指南
-
-### 源代码部署
-
-#### 1. 克隆项目
-```bash
-git clone https://github.com/eooce/nav-Item.git
-cd nav-item
-```
-
-#### 2. 安装后端依赖
+1) 安装依赖并构建前端
 ```bash
 npm install
+npm run build
 ```
 
-#### 3. 构建前端
+2) 运行本地 Pages + Functions（带 D1/R2 绑定）
 ```bash
-cd web && npm install && npm run build
+wrangler pages dev web/dist \
+  --d1 DB=nav-item \
+  --r2 UPLOADS=nav-item-uploads \
+  --binding JWT_SECRET=dev-secret \
+  --binding ADMIN_USERNAME=admin \
+  --binding ADMIN_PASSWORD=pass123 \
+  --local-protocol http \
+  --persist-to .wrangler/state/v3
 ```
 
-#### 4. 启动后端服务
+## 部署到 Cloudflare Pages
+
+### Dashboard 方式（推荐）
+1) 连接 GitHub 仓库并创建 Pages 项目。
+2) Build command:
+```
+npm run build
+```
+3) Output directory:
+```
+web/dist
+```
+4) 绑定资源：
+- D1: `DB`
+- R2: `UPLOADS`
+5) Secrets：
+- `JWT_SECRET`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+
+### Wrangler 方式（可选）
+创建 D1 与迁移：
 ```bash
-# 在项目根目录
-cd .. && npm start
+wrangler d1 create nav-item
+wrangler d1 migrations apply nav-item --remote
 ```
 
-#### 6. 访问应用
-- 前端地址：http://localhost:3000
-- 后台管理：http://localhost:3000/admin
-- 默认管理员账号：admin / 123456
+## 数据库与迁移
 
-### Docker 部署
-
-#### 1：docker快速部署
-   ```bash
-   docker run -d \
-     --name nav-item \
-     -p 3000:3000 \
-     -v $(pwd)/database:/app/database \
-     -v $(pwd)/uploads:/app/uploads \
-     -e NODE_ENV=production \
-     -e ADMIN_USERNAME=admin \
-     -e ADMIN_PASSWORD=123456 \
-     eooce/nav-item
-   ```
-### 2: docker-compose.yaml 部署
+本地：
 ```bash
-version: '3'
-
-services:
-  nav-item:
-    image: eooce/nav-item
-    container_name: nav-item
-    ports:
-      - "3000:3000"
-    environment:
-      - PORT=3000             # 监听端口
-      - ADMIN_USERNAME=admin  # 后台用户名
-      - ADMIN_PASSWORD=123456 # 后台密码
-    volumes:
-      - ./database:/app/database  # 持久化数据库
-    restart: unless-stopped
+wrangler d1 migrations apply nav-item --local
 ```
-### 3: docker容器等使用docker image配合环境变量部署
+
+可选种子数据：
 ```bash
-eooce/nav-item
+wrangler d1 execute nav-item --file=migrations/seed.sql --local
 ```
-或
+
+## 接口说明
+
+- `/api/health`：健康检查
+- `/api/login`：登录获取 token
+- `/api/menus`、`/api/cards`、`/api/friends`、`/api/users/*`：CRUD
+- `/api/upload`：上传文件（字段名 `logo`）
+- `/uploads/<key>`：访问上传文件
+
+## 手工测试步骤（curl）
+
+1) 健康检查
 ```bash
-ghcr.io/eooce/nav-item:latest
+curl http://127.0.0.1:8788/api/health
 ```
 
-## serv00|ct8|Hostuno 一键安装脚本
-- 环境变量,放在脚本前，随脚本一起运行，英文空隔隔开
-- 后台管理用户名和密码默认分别为为`admin`和`123456`
-  * `DOMAIN`为自定义站点域名
+2) 登录获取 token
+```bash
+curl -H "content-type: application/json" \
+  -d '{"username":"admin","password":"pass123"}' \
+  http://127.0.0.1:8788/api/login
+```
+
+3) 读取用户信息
+```bash
+curl -H "Authorization: Bearer <TOKEN>" \
+  http://127.0.0.1:8788/api/users/me
+```
+
+4) 新增菜单
+```bash
+curl -H "Authorization: Bearer <TOKEN>" \
+  -H "content-type: application/json" \
+  -d '{"name":"Test Menu","order":1}' \
+  http://127.0.0.1:8788/api/menus
+```
+
+5) 新增卡片
+```bash
+curl -H "Authorization: Bearer <TOKEN>" \
+  -H "content-type: application/json" \
+  -d '{"menu_id":1,"sub_menu_id":null,"title":"Test","url":"https://example.com","logo_url":"","desc":"","order":1}' \
+  http://127.0.0.1:8788/api/cards
+```
+
+6) 友链列表
+```bash
+curl http://127.0.0.1:8788/api/friends
+```
+
+7) 上传并访问
+```bash
+curl -F "logo=@web/public/default-favicon.png" http://127.0.0.1:8788/api/upload
+curl http://127.0.0.1:8788/uploads/<key>
+```
+
+## 冒烟测试脚本（可选）
 
 ```bash
-bash <(curl -Ls https://github.com/eooce/nav-item/releases/download/ct8-and-serv00/install.sh) 
+ADMIN_USERNAME=admin ADMIN_PASSWORD=pass123 \
+node scripts/smoke-test.mjs --baseURL=http://127.0.0.1:8788
 ```
 
-## 🤝 贡献指南
+## Git 清理说明
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开 Pull Request
+若曾提交过构建产物/缓存，可执行：
+```bash
+git rm -r --cached node_modules web/dist .wrangler
+```
 
-## 📄 许可证
+## 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 👨‍💻 作者
-
-**eooce** - [GitHub](https://github.com/eooce)
-
-## 🙏 致谢
-
-感谢所有为这个项目做出贡献的开发者！
-
----
-
-⭐ 如果这个项目对你有帮助，请给它一个星标！ 
-
-
-
-
-
-
+MIT

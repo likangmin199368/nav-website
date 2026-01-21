@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "author": "eooce",
   "description": "nav-item-frontend",
-  "repository": "https://github.com/eooce/nav-item",
+  "repository": "https://github.com/xiaokcoding/nav-item",
   "license": "MIT",
   "scripts": {
     "dev": "vite --host",
