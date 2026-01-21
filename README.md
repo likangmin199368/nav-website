@@ -44,22 +44,32 @@ wrangler pages dev web/dist \
 ## 部署到 Cloudflare Pages
 
 ### Dashboard 方式（推荐）
-1) 连接 GitHub 仓库并创建 Pages 项目。
-2) Build command:
+1) 打开 Cloudflare 控制台 → Pages → 创建项目，选择 GitHub 仓库 `xiaokcoding/nav-item`。
+2) 构建设置：
+   - Framework preset：选“无”
+   - Build command：`npm run build`
+   - Output directory：`web/dist`
+3) Functions 设置：保持默认，Pages 会自动识别仓库根目录下的 `functions/`。
+4) 绑定 D1：
+   - 先在 D1 创建数据库（例如 `nav-item`）
+   - Pages 项目 → 设置 → Functions → D1 绑定
+   - 绑定名称：`DB`
+   - 数据库：选择刚创建的 D1
+5) 绑定 R2：
+   - 先在 R2 创建存储桶（例如 `nav-item-uploads`）
+   - Pages 项目 → 设置 → Functions → R2 绑定
+   - 绑定名称：`UPLOADS`
+   - 存储桶：选择刚创建的桶
+6) Secrets（同页设置）：
+   - `JWT_SECRET`（任意强随机字符串）
+   - `ADMIN_USERNAME`（初始管理员账号）
+   - `ADMIN_PASSWORD`（初始管理员密码）
+7) D1 迁移（远程）：
+```bash
+wrangler d1 create nav-item
+wrangler d1 migrations apply nav-item --remote
 ```
-npm run build
-```
-3) Output directory:
-```
-web/dist
-```
-4) 绑定资源：
-- D1: `DB`
-- R2: `UPLOADS`
-5) Secrets：
-- `JWT_SECRET`
-- `ADMIN_USERNAME`
-- `ADMIN_PASSWORD`
+8) 提交并部署：推送到 GitHub 后，Pages 会自动构建并发布。
 
 ### Wrangler 方式（可选）
 创建 D1 与迁移：
