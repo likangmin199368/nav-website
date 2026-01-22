@@ -50,7 +50,7 @@
           </svg>
           友情链接
         </button>
-        <p class="copyright">Copyright © 2025 Nav-Item | <a href="https://github.com/eooce/Nav-Item" target="_blank" class="footer-link">Powered by eooce</a></p>
+        <p class="copyright">Copyright © 2026 Nav-Item | <a href="https://github.com/xiaokcoding/nav-item" target="_blank" class="footer-link">Powered by xiaokcoding</a></p>
       </div>
     </footer>
 
