@@ -50,28 +50,31 @@ wrangler pages dev web/dist \
    - 输出目录：`web/dist`
 4) 绑定 D1：
    - 先在 D1 创建数据库（名称可自定，例如 `nav-item`）
-   - Pages 项目 → 设置 → Functions → D1 绑定
+   - Pages 项目 → 设置 → 绑定 → 添加 → D1 数据库
    - 绑定名称：`DB`（必须为 `DB`）
    - 数据库：选择刚创建的 D1
 5) 绑定 R2：
    - 先在 R2 创建存储桶（名称可自定，例如 `nav-item-uploads`）
-   - Pages 项目 → 设置 → Functions → R2 绑定
+   - Pages 项目 → 设置 → 绑定 → 添加 → R2 存储桶
    - 绑定名称：`UPLOADS`（必须为 `UPLOADS`）
    - 存储桶：选择刚创建的桶
-6) Secrets（同页设置）：
+6) Secrets：
+   - Pages 项目 → 设置 → 变量和机密 → 添加
    - `JWT_SECRET`（任意强随机字符串）
    - `ADMIN_USERNAME`（初始管理员账号）
    - `ADMIN_PASSWORD`（初始管理员密码）
 7) D1 Studio 建表（只需执行一次）：
-   - 进入 D1 → 选择数据库 → Studio
-   - 将 `migrations/init.sql` 的内容全部复制进去执行
-8) 以后只要 push 代码，Pages 会自动构建并发布。
+   - 进入 D1 → 选择数据库 → Explore Data
+   - 将 `migrations/init.sql` 的内容全部复制进去
+   - 点击右下角 `Run` 按钮的下拉小箭头，选择 `Run all statement` 执行
+8) 重新部署（一定要重新部署）：Pages 项目 → 部署 → 查看详细信息 → 管理部署 → 重试部署
 
 ## 数据库与初始化说明
 
 默认数据不是自动导入的，可手动按需导入：
-- 进入 D1 → 选择数据库 → Studio
-- 将 `migrations/seed.sql` 的内容全部复制进去执行
+- 进入 D1 → 选择数据库 → Explore Data
+- 将 `migrations/seed.sql` 的内容全部复制进去
+- 点击右下角 `Run` 按钮的下拉小箭头，选择 `Run all statement` 执行
 
 ## 接口说明
 
