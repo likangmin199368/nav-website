@@ -41,6 +41,7 @@
         <li :class="{active: page==='card'}" @click="page='card'; closeSider()">卡片管理</li>
         <li :class="{active: page==='friend'}" @click="page='friend'; closeSider()">友链管理</li>
         <li :class="{active: page==='user'}" @click="page='user'; closeSider()">用户管理</li>
+        <li :class="{active: page==='bookmark'}" @click="page='bookmark'; closeSider()">书签导入</li>
       </ul>
     </aside>
     <main class="admin-main">
@@ -80,6 +81,7 @@
         <CardManage v-if="page==='card'" />
         <FriendLinkManage v-if="page==='friend'" />
         <UserManage v-if="page==='user'" />
+        <BookmarkImport v-if="page==='bookmark'" />
       </div>
       <footer class="admin-footer">
         <p class="admin-copyright">Copyright © 2026 Nav-Item | <a href="https://github.com/xiaokcoding/nav-item" target="_blank" class="footer-link">Powered by xiaokcoding</a></p>
@@ -95,6 +97,7 @@ import MenuManage from './admin/MenuManage.vue';
 import CardManage from './admin/CardManage.vue';
 import FriendLinkManage from './admin/FriendLinkManage.vue';
 import UserManage from './admin/UserManage.vue';
+import BookmarkImport from './admin/BookmarkImport.vue';
 
 const page = ref('welcome');
 const lastLoginTime = ref('');
@@ -113,6 +116,7 @@ const pageTitle = computed(() => {
     case 'card': return '卡片管理';
     case 'friend': return '友链管理';
     case 'user': return '用户管理';
+    case 'bookmark': return '书签导入';
     default: return '';
   }
 });

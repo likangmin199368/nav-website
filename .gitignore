@@ -10,3 +10,5 @@ dist/
 *.pid
 *.cache
 *.tmp
+CLAUDE.md
+AGENTS.md

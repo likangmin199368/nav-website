@@ -44,4 +44,16 @@ export const deleteFriend = (id) => axios.delete(`${BASE}/friends/${id}`, { head
 // 用户API
 export const getUserProfile = () => axios.get(`${BASE}/users/profile`, { headers: authHeaders() });
 export const changePassword = (oldPassword, newPassword) => axios.put(`${BASE}/users/password`, { oldPassword, newPassword }, { headers: authHeaders() });
-export const getUsers = () => axios.get(`${BASE}/users`, { headers: authHeaders() }); 
+export const getUsers = () => axios.get(`${BASE}/users`, { headers: authHeaders() });
+
+// 书签导入API
+export const importBookmarks = (file, mode = 'merge', target = 'auto', dryRun = false) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('mode', mode);
+  formData.append('target', target);
+  formData.append('dryRun', dryRun.toString());
+  return axios.post(`${BASE}/import/bookmarks`, formData, {
+    headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' }
+  });
+}; 
