@@ -21,13 +21,12 @@
 
 ```
 nav-item/
+├── package.json                    # 根依赖与脚本
+├── init.sql                        # D1 建表
 ├── functions/                      # Pages Functions (ESM JS)
 │   ├── api/[[path]].js             # API 路由与鉴权
 │   ├── lib/bookmark-parser.js      # 书签解析工具
 │   └── uploads/[[key]].js          # R2 文件读取
-├── migrations/                     # D1 建表与种子
-│   ├── init.sql                    # 建表脚本
-│   └── seed.sql                    # 种子数据
 ├── web/                            # Vue 3 前端
 │   ├── index.html                  # Vite 入口 HTML
 │   ├── package.json                # 前端依赖与脚本
@@ -55,7 +54,6 @@ nav-item/
 │               ├── FriendLinkManage.vue # 友链管理页面
 │               ├── MenuManage.vue     # 菜单管理页面
 │               └── UserManage.vue     # 用户管理页面
-├── package.json                     # 根依赖与脚本
 ```
 
 # 部署到 Cloudflare Pages
@@ -83,6 +81,6 @@ nav-item/
    - `ADMIN_PASSWORD`（初始管理员密码）
 7) D1 Studio 建表（只需执行一次）：
    - 进入 D1 → 选择数据库 → Explore Data
-   - 将 `migrations/init.sql` 的内容全部复制进去
+   - 将 `init.sql` 的内容全部复制进去
    - 点击右下角 `Run` 按钮的下拉小箭头，选择 `Run all statement` 执行
 8) 重新部署（一定要重新部署）：Pages 项目 → 部署 → 查看详细信息 → 管理部署 → 重试部署
