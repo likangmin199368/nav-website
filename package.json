@@ -6,12 +6,12 @@
   "repository": "https://github.com/xiaokcoding/nav-item",
   "license": "MIT",
   "private": true,
+  "type": "module",
   "workspaces": [
     "web"
   ],
   "scripts": {
-    "build": "npm --workspace web run build",
-    "test:smoke": "node scripts/smoke-test.mjs"
+    "build": "npm --workspace web run build"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
