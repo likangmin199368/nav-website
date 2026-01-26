@@ -86,6 +86,10 @@ function hideSubMenu(menuId) {
   border-radius: 8px;
   position: relative;
   overflow: hidden;
+  /* 中英文对齐优化 */
+  min-width: 80px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .menu-bar button::before {

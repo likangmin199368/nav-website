@@ -339,12 +339,12 @@ export function generateImportPlan({
     // 自动创建模式
     // 1. 根文件夹 => 菜单
     // 2. 子文件夹路径 => 分组（用 " / " 拼接）
-    // 3. 根级散书签 => "导入书签" 菜单的默认分组
+    // 3. 根级散书签 => "Home" 菜单的默认分组
 
     for (const bm of bookmarks) {
       if (bm.rootFolder === null) {
-        // 根级散书签 => "导入书签" 菜单
-        const menuKey = ensureMenu('导入书签');
+        // 根级散书签 => "Home" 菜单
+        const menuKey = ensureMenu('Home');
         addCard(menuKey, null, bm.title, bm.url);
       } else {
         // 有根文件夹
