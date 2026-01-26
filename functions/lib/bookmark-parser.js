@@ -128,7 +128,8 @@ export function parseBookmarkHtml(html) {
           }
 
           // 检查是否为书签栏（PERSONAL_TOOLBAR_FOLDER="true"）
-          const isToolbarFolder = h3.getAttribute('PERSONAL_TOOLBAR_FOLDER') === 'true';
+          // node-html-parser 会将属性名转为小写
+          const isToolbarFolder = h3.getAttribute('personal_toolbar_folder') === 'true';
 
           if (isToolbarFolder) {
             // 书签栏不作为根目录，直接处理其子内容
