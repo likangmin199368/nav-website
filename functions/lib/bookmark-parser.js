@@ -2,11 +2,8 @@
  * Bookmark HTML Parser
  * 解析 Netscape Bookmark File Format (Chrome/Firefox 导出的书签 HTML)
  * 
- * 输出结构保留完整文件夹路径信息，支持：
- * - 自动创建模式：根文件夹 => 菜单，子文件夹路径 => 分组名（多级用 " / " 拼接）
- * - 指定栏目模式：所有书签导入到指定菜单，分组按完整路径创建
+ * 使用正则表达式解析，因为 node-html-parser 会将嵌套的 DL 结构扁平化
  */
-import { parse } from 'node-html-parser';
 
 export const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -31,16 +28,22 @@ export function sanitizeUrl(url) {
 }
 
 /**
+ * 解码 HTML 实体
+ */
+function decodeHtmlEntities(text) {
+  if (!text) return '';
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+}
+
+/**
  * 解析书签 HTML，返回带路径信息的扁平化书签列表
- * @param {string} html
- * @returns {{ bookmarks: Array<{title, url, rootFolder, folderPath}>, rootFolders: string[], errors: string[] }}
- * 
- * bookmarks 中每个书签包含:
- * - title: 书签标题
- * - url: 书签 URL
- * - rootFolder: 根文件夹名（如 "书签栏"），null 表示根级散书签
- * - folderPath: 子文件夹路径数组（不含根文件夹），如 ["开发", "前端"]
- * - order: 在同级的原始顺序
+ * 使用正则表达式按顺序解析 HTML 标签
  */
 export function parseBookmarkHtml(html) {
   const errors = [];
@@ -49,85 +52,100 @@ export function parseBookmarkHtml(html) {
   let globalOrder = 0;
 
   try {
-    const root = parse(html, {
-      lowerCaseTagName: true,
-      comment: false,
-      blockTextElements: { script: false, noscript: false, style: false }
-    });
+    // 用正则匹配所有关键标签
+    // 匹配: <DL>, </DL>, <DT><H3 ...>文件夹名</H3>, <DT><A ...>书签名</A>
+    const tagPattern = /<DL>|<\/DL>|<DT><H3([^>]*)>([^<]*)<\/H3>|<DT><A([^>]*)>([^<]*)<\/A>/gi;
 
-    const topDl = root.querySelector('dl');
-    if (!topDl) {
-      errors.push('未找到有效的书签结构 (缺少 DL 元素)');
-      return { bookmarks, rootFolders: [], errors };
-    }
+    // 文件夹栈：每个元素是 { name, isToolbar }
+    const folderStack = [];
+    let insideToolbar = false;  // 是否在书签栏内部
 
-    /**
-     * 从DT元素中获取A标签
-     */
-    function getAFromDt(dt) {
-      if (!dt || !dt.childNodes) return null;
-      for (const child of dt.childNodes) {
-        if (child.nodeType === 1 && child.tagName?.toLowerCase() === 'a') {
-          return child;
-        }
+    let match;
+    while ((match = tagPattern.exec(html)) !== null) {
+      const fullMatch = match[0].toUpperCase();
+
+      if (fullMatch === '<DL>') {
+        // 进入新的 DL 层级（不做特殊处理，文件夹栈已在 H3 时处理）
+        continue;
       }
-      return null;
-    }
 
-    /**
-     * 扁平化解析书签
-     * node-html-parser 把所有元素扁平化到同一个 DL 下
-     * 所以用顺序来判断书签归属：遇到 H3 就切换当前文件夹，后续 DT 都属于这个文件夹
-     */
-    let currentFolder = null;  // 当前文件夹名
-    let skipUntilNextH3 = false;  // 是否跳过直到下一个H3（用于跳过书签栏标题本身）
+      if (fullMatch === '</DL>') {
+        // 离开 DL 层级，弹出文件夹栈
+        if (folderStack.length > 0) {
+          const popped = folderStack.pop();
+          // 如果弹出的是书签栏，重置标记
+          if (popped.isToolbar) {
+            insideToolbar = false;
+          }
+        }
+        continue;
+      }
 
-    const children = topDl.childNodes;
-    for (const child of children) {
-      if (child.nodeType !== 1) continue;
-      const tagName = child.tagName?.toLowerCase();
+      // H3 标签 - 文件夹
+      if (match[1] !== undefined) {
+        const attrs = match[1];
+        const folderName = sanitizeString(decodeHtmlEntities(match[2]));
 
-      if (tagName === 'h3') {
-        const folderName = sanitizeString(child.text || child.textContent || '');
         if (!folderName) {
           errors.push('发现空名称的文件夹，已跳过');
           continue;
         }
 
         // 检查是否为书签栏
-        const isToolbarFolder = child.getAttribute('personal_toolbar_folder') === 'true';
-        
-        if (isToolbarFolder) {
-          // 书签栏不作为根目录，跳过这个 H3，但继续处理后面的内容
-          // 后续的 H3 会成为真正的根文件夹
-          skipUntilNextH3 = false;  // 重置，继续处理后面内容
-          currentFolder = null;  // 书签栏下的直接书签没有文件夹
+        const isToolbar = /PERSONAL_TOOLBAR_FOLDER\s*=\s*["']?true["']?/i.test(attrs);
+
+        if (isToolbar) {
+          // 书签栏：标记进入书签栏，但不加入路径
+          folderStack.push({ name: folderName, isToolbar: true });
+          insideToolbar = true;
         } else {
-          // 普通文件夹，成为当前文件夹
-          currentFolder = folderName;
-          rootFolderSet.add(folderName);
-          skipUntilNextH3 = false;
-        }
-      } else if (tagName === 'dt' && !skipUntilNextH3) {
-        // 检查 DT 内是否有 A 标签（书签）
-        const a = getAFromDt(child);
-        if (a) {
-          const url = sanitizeUrl(a.getAttribute('href') || '');
-          const title = sanitizeString(a.text || a.textContent || '');
+          // 普通文件夹
+          folderStack.push({ name: folderName, isToolbar: false });
 
-          if (!url) {
-            if (title) errors.push(`书签 "${title}" 的 URL 无效，已跳过`);
-            continue;
+          // 如果在书签栏内且这是第一层文件夹，它就是根文件夹
+          if (insideToolbar) {
+            // 计算当前有效路径（排除书签栏本身）
+            const effectiveDepth = folderStack.filter(f => !f.isToolbar).length;
+            if (effectiveDepth === 1) {
+              rootFolderSet.add(folderName);
+            }
           }
-
-          bookmarks.push({
-            title: title || url,
-            url,
-            rootFolder: currentFolder,
-            folderPath: [],  // 扁平化后没有子文件夹路径
-            order: globalOrder++
-          });
         }
+        continue;
+      }
+
+      // A 标签 - 书签
+      if (match[3] !== undefined) {
+        const attrs = match[3];
+        const title = sanitizeString(decodeHtmlEntities(match[4]));
+
+        // 提取 href
+        const hrefMatch = /HREF\s*=\s*["']([^"']*)["']/i.exec(attrs);
+        const url = hrefMatch ? sanitizeUrl(hrefMatch[1]) : '';
+
+        if (!url) {
+          if (title) errors.push(`书签 "${title}" 的 URL 无效，已跳过`);
+          continue;
+        }
+
+        // 计算当前书签的文件夹路径（排除书签栏）
+        const effectiveFolders = folderStack.filter(f => !f.isToolbar).map(f => f.name);
+
+        let rootFolder = null;
+        let folderPath = [];
+
+        if (effectiveFolders.length > 0) {
+          rootFolder = effectiveFolders[0];
+          folderPath = effectiveFolders.slice(1);
+        }
+
+        bookmarks.push({
+          title: title || url,
+          url,
+          rootFolder,
+          folderPath,
+          order: globalOrder++
+        });
       }
     }
 
