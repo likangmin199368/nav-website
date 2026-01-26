@@ -62,6 +62,44 @@ export function parseBookmarkHtml(html) {
     }
 
     /**
+     * 获取元素的直接子元素（只匹配指定标签）
+     */
+    function getDirectChild(parent, tagName) {
+      if (!parent || !parent.childNodes) return null;
+      for (const child of parent.childNodes) {
+        if (child.nodeType === 1 && child.tagName?.toLowerCase() === tagName) {
+          return child;
+        }
+      }
+      return null;
+    }
+
+    /**
+     * 获取 DT 元素的下一个兄弟 DL 元素
+     * 注意：在书签 HTML 中，DL 通常是 DT 的兄弟而不是子元素
+     * 但 node-html-parser 可能将其解析为子元素
+     */
+    function getNestedDl(dtElement) {
+      // 先检查直接子元素
+      const directDl = getDirectChild(dtElement, 'dl');
+      if (directDl) return directDl;
+      
+      // 检查下一个兄弟
+      let next = dtElement.nextElementSibling;
+      while (next) {
+        if (next.tagName?.toLowerCase() === 'dl') {
+          return next;
+        }
+        if (next.tagName?.toLowerCase() === 'dt') {
+          // 遇到另一个 DT，停止
+          break;
+        }
+        next = next.nextElementSibling;
+      }
+      return null;
+    }
+
+    /**
      * 递归解析书签
      * @param {HTMLElement} dlElement
      * @param {string|null} rootFolder 当前根文件夹名
@@ -76,9 +114,10 @@ export function parseBookmarkHtml(html) {
         const tagName = child.tagName?.toLowerCase();
         if (tagName !== 'dt') continue;
 
-        const h3 = child.querySelector('h3');
-        const a = child.querySelector('a');
-        const nestedDl = child.querySelector('dl');
+        // 关键修复：只检查直接子元素，而不是用 querySelector 匹配所有后代
+        const h3 = getDirectChild(child, 'h3');
+        const a = getDirectChild(child, 'a');
+        const nestedDl = getNestedDl(child);
 
         if (h3) {
           // 文件夹
@@ -88,7 +127,15 @@ export function parseBookmarkHtml(html) {
             continue;
           }
 
-          if (rootFolder === null) {
+          // 检查是否为书签栏（PERSONAL_TOOLBAR_FOLDER="true"）
+          const isToolbarFolder = h3.getAttribute('PERSONAL_TOOLBAR_FOLDER') === 'true';
+
+          if (isToolbarFolder) {
+            // 书签栏不作为根目录，直接处理其子内容
+            if (nestedDl) {
+              traverse(nestedDl, null, []);
+            }
+          } else if (rootFolder === null) {
             // 当前在根级，这是一个根文件夹
             rootFolderSet.add(folderName);
             if (nestedDl) {
