@@ -1,279 +1,379 @@
 /**
  * Bookmark HTML Parser
  * 解析 Netscape Bookmark File Format (Chrome/Firefox 导出的书签 HTML)
+ * 
+ * 输出结构保留完整文件夹路径信息，支持：
+ * - 自动创建模式：根文件夹 => 菜单，子文件夹路径 => 分组名（多级用 " / " 拼接）
+ * - 指定栏目模式：所有书签导入到指定菜单，分组按完整路径创建
  */
 import { parse } from 'node-html-parser';
 
-// 最大文件大小 5MB
 export const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /**
- * 清理字符串，防止 XSS
- * @param {string} str
- * @returns {string}
+ * 清理字符串
  */
 export function sanitizeString(str) {
   if (!str || typeof str !== 'string') return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-    .trim()
-    .slice(0, 500); // 限制长度
+  return str.trim().slice(0, 500);
 }
 
 /**
  * 清理 URL
- * @param {string} url
- * @returns {string}
  */
 export function sanitizeUrl(url) {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
-  // 只允许 http/https 协议
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
     return '';
   }
-  return trimmed.slice(0, 2048); // 限制 URL 长度
+  return trimmed.slice(0, 2048);
 }
 
 /**
- * 解析书签 HTML，返回结构化数据
+ * 解析书签 HTML，返回带路径信息的扁平化书签列表
  * @param {string} html
- * @returns {{ menus: Array, errors: Array }}
+ * @returns {{ bookmarks: Array<{title, url, rootFolder, folderPath}>, rootFolders: string[], errors: string[] }}
+ * 
+ * bookmarks 中每个书签包含:
+ * - title: 书签标题
+ * - url: 书签 URL
+ * - rootFolder: 根文件夹名（如 "书签栏"），null 表示根级散书签
+ * - folderPath: 子文件夹路径数组（不含根文件夹），如 ["开发", "前端"]
+ * - order: 在同级的原始顺序
  */
 export function parseBookmarkHtml(html) {
   const errors = [];
-  const menus = [];
+  const bookmarks = [];
+  const rootFolderSet = new Set();
+  let globalOrder = 0;
 
   try {
     const root = parse(html, {
       lowerCaseTagName: true,
       comment: false,
-      blockTextElements: {
-        script: false,
-        noscript: false,
-        style: false,
-      }
+      blockTextElements: { script: false, noscript: false, style: false }
     });
 
-    // 查找所有 DL 元素（书签列表容器）
     const topDl = root.querySelector('dl');
     if (!topDl) {
       errors.push('未找到有效的书签结构 (缺少 DL 元素)');
-      return { menus, errors };
+      return { bookmarks, rootFolders: [], errors };
     }
 
-    // 解析顶层 DL 下的内容
-    parseBookmarkLevel(topDl, menus, null, errors, 0);
+    /**
+     * 递归解析书签
+     * @param {HTMLElement} dlElement
+     * @param {string|null} rootFolder 当前根文件夹名
+     * @param {string[]} pathStack 当前路径栈（不含根文件夹）
+     */
+    function traverse(dlElement, rootFolder, pathStack) {
+      if (!dlElement) return;
+
+      const children = dlElement.childNodes;
+      for (const child of children) {
+        if (child.nodeType !== 1) continue;
+        const tagName = child.tagName?.toLowerCase();
+        if (tagName !== 'dt') continue;
+
+        const h3 = child.querySelector('h3');
+        const a = child.querySelector('a');
+        const nestedDl = child.querySelector('dl');
+
+        if (h3) {
+          // 文件夹
+          const folderName = sanitizeString(h3.text || h3.textContent || '');
+          if (!folderName) {
+            errors.push('发现空名称的文件夹，已跳过');
+            continue;
+          }
+
+          if (rootFolder === null) {
+            // 当前在根级，这是一个根文件夹
+            rootFolderSet.add(folderName);
+            if (nestedDl) {
+              traverse(nestedDl, folderName, []);
+            }
+          } else {
+            // 当前在某个根文件夹内，这是子文件夹
+            const newPath = [...pathStack, folderName];
+            if (nestedDl) {
+              traverse(nestedDl, rootFolder, newPath);
+            }
+          }
+        } else if (a) {
+          // 书签
+          const url = sanitizeUrl(a.getAttribute('href') || '');
+          const title = sanitizeString(a.text || a.textContent || '');
+
+          if (!url) {
+            if (title) errors.push(`书签 "${title}" 的 URL 无效，已跳过`);
+            continue;
+          }
+
+          bookmarks.push({
+            title: title || url,
+            url,
+            rootFolder,
+            folderPath: [...pathStack],
+            order: globalOrder++
+          });
+        }
+      }
+    }
+
+    traverse(topDl, null, []);
 
   } catch (e) {
     errors.push(`解析错误: ${e.message}`);
   }
 
-  return { menus, errors };
+  return {
+    bookmarks,
+    rootFolders: Array.from(rootFolderSet),
+    errors
+  };
 }
 
 /**
- * 递归解析书签层级
- * @param {HTMLElement} dlElement DL 元素
- * @param {Array} targetArray 目标数组
- * @param {object|null} parentMenu 父菜单
- * @param {Array} errors 错误数组
- * @param {number} depth 当前深度
+ * 根据目标模式生成导入计划
+ * @param {object} params
+ * @param {Array} params.bookmarks - 解析后的书签列表
+ * @param {string[]} params.rootFolders - 所有根文件夹名
+ * @param {'auto'|'menu'} params.targetType - 目标类型
+ * @param {number|null} params.targetMenuId - 指定栏目时的菜单 ID
+ * @param {string|null} params.targetMenuName - 指定栏目时的菜单名称
+ * @param {Map<string, number>} params.existingMenus - 已存在的菜单 name => id
+ * @param {Map<string, Map<string, number>>} params.existingGroups - 已存在的分组 menuId => (groupName => id)
+ * @param {Map<string, Set<string>>} params.existingUrls - 已存在的 URL (menuId-groupId|null) => Set<url>
+ * @returns {object} plan
  */
-function parseBookmarkLevel(dlElement, targetArray, parentMenu, errors, depth) {
-  if (!dlElement) return;
-
-  const children = dlElement.childNodes;
-  let currentOrder = 0;
-
-  for (const child of children) {
-    if (child.nodeType !== 1) continue; // 只处理元素节点
-
-    const tagName = child.tagName?.toLowerCase();
-    if (tagName !== 'dt') continue;
-
-    // 查找 DT 下的 H3 (文件夹) 或 A (书签)
-    const h3 = child.querySelector('h3');
-    const a = child.querySelector('a');
-    const nestedDl = child.querySelector('dl');
-
-    if (h3) {
-      // 这是一个文件夹
-      const folderName = sanitizeString(h3.text || h3.textContent || '');
-
-      if (!folderName) {
-        errors.push('发现空名称的文件夹，已跳过');
-        continue;
-      }
-
-      if (depth === 0) {
-        // 顶层文件夹 -> menu
-        const menu = {
-          type: 'menu',
-          name: folderName,
-          order: currentOrder++,
-          subMenus: [],
-          cards: []
-        };
-        targetArray.push(menu);
-
-        // 递归解析子内容
-        if (nestedDl) {
-          parseBookmarkLevel(nestedDl, menu.subMenus, menu, errors, depth + 1);
-        }
-      } else if (depth === 1 && parentMenu) {
-        // 二级文件夹 -> sub_menu
-        const subMenu = {
-          type: 'subMenu',
-          name: folderName,
-          order: currentOrder++,
-          cards: []
-        };
-        parentMenu.subMenus.push(subMenu);
-
-        // 递归解析书签（三级及以下文件夹内的书签都归入此 sub_menu）
-        if (nestedDl) {
-          parseBookmarkLevel(nestedDl, subMenu.cards, subMenu, errors, depth + 1);
-        }
-      } else {
-        // 更深层级的文件夹，将其内容扁平化到当前层级
-        if (nestedDl) {
-          parseBookmarkLevel(nestedDl, targetArray, parentMenu, errors, depth);
-        }
-      }
-    } else if (a) {
-      // 这是一个书签
-      const url = sanitizeUrl(a.getAttribute('href') || '');
-      const title = sanitizeString(a.text || a.textContent || '');
-
-      if (!url) {
-        if (title) {
-          errors.push(`书签 "${title}" 的 URL 无效，已跳过`);
-        }
-        continue;
-      }
-
-      const card = {
-        type: 'card',
-        title: title || url,
-        url: url,
-        desc: '',
-        order: currentOrder++
-      };
-
-      // 根据深度决定添加位置
-      if (depth === 0) {
-        // 顶层书签，需要创建默认 menu
-        // 这种情况较少见，暂时收集到 errors 提示
-        errors.push(`顶层书签 "${title}" 需要放入默认栏目`);
-        // 创建一个特殊标记
-        targetArray.push({
-          ...card,
-          type: 'topLevelCard'
-        });
-      } else if (depth === 1 && parentMenu) {
-        // menu 下的直接书签（没有 sub_menu）
-        parentMenu.cards.push(card);
-      } else {
-        // sub_menu 或更深层级下的书签
-        targetArray.push(card);
-      }
+export function generateImportPlan({
+  bookmarks,
+  rootFolders,
+  targetType,
+  targetMenuId,
+  targetMenuName,
+  existingMenus,
+  existingGroups,
+  existingUrls
+}) {
+  const plan = {
+    // 菜单计划: { name, action: 'create'|'reuse', existingId?, order }
+    menus: [],
+    // 分组计划: { menuKey, name, action: 'create'|'reuse', existingId?, order }
+    groups: [],
+    // 书签计划: { menuKey, groupKey, title, url, action: 'create'|'skip', order }
+    cards: [],
+    // 统计
+    stats: {
+      menusToCreate: 0,
+      menusToReuse: 0,
+      groupsToCreate: 0,
+      groupsToReuse: 0,
+      cardsToCreate: 0,
+      cardsToSkip: 0
     }
-  }
-}
+  };
 
-/**
- * 将解析结果转换为扁平化的导入数据
- * @param {Array} menus 解析后的菜单结构
- * @returns {{ menuList: Array, subMenuList: Array, cardList: Array }}
- */
-export function flattenParsedData(menus) {
-  const menuList = [];
-  const subMenuList = [];
-  const cardList = [];
-  const topLevelCards = [];
+  // 临时映射
+  const menuKeyMap = new Map(); // menuKey => plan.menus index
+  const groupKeyMap = new Map(); // groupKey => plan.groups index
+  const urlTracker = new Map(); // (menuKey-groupKey) => Set<url> 用于批次内去重
 
-  for (const menu of menus) {
-    if (menu.type === 'topLevelCard') {
-      topLevelCards.push(menu);
-      continue;
+  let menuOrder = 0;
+  const groupOrderMap = new Map(); // menuKey => current order
+  const cardOrderMap = new Map(); // groupKey => current order
+
+  /**
+   * 获取或创建菜单计划
+   */
+  function ensureMenu(menuName) {
+    const menuKey = `menu:${menuName}`;
+    if (menuKeyMap.has(menuKey)) {
+      return menuKey;
     }
 
-    if (menu.type !== 'menu') continue;
-
-    const menuData = {
-      name: menu.name,
-      order: menu.order,
-      _tempId: `menu_${menuList.length}`
+    const existingId = existingMenus.get(menuName);
+    const menuPlan = {
+      key: menuKey,
+      name: menuName,
+      action: existingId ? 'reuse' : 'create',
+      existingId: existingId || null,
+      order: menuOrder++
     };
-    menuList.push(menuData);
+    plan.menus.push(menuPlan);
+    menuKeyMap.set(menuKey, plan.menus.length - 1);
 
-    // 处理 menu 下的直接 cards
-    for (const card of menu.cards || []) {
-      cardList.push({
-        ...card,
-        _menuTempId: menuData._tempId,
-        _subMenuTempId: null
-      });
+    if (existingId) {
+      plan.stats.menusToReuse++;
+    } else {
+      plan.stats.menusToCreate++;
     }
 
-    // 处理 sub_menus
-    for (const subMenu of menu.subMenus || []) {
-      if (subMenu.type === 'card') {
-        // 这是 menu 下的直接 card
-        cardList.push({
-          ...subMenu,
-          _menuTempId: menuData._tempId,
-          _subMenuTempId: null
-        });
-      } else if (subMenu.type === 'subMenu') {
-        const subMenuData = {
-          name: subMenu.name,
-          order: subMenu.order,
-          _tempId: `submenu_${subMenuList.length}`,
-          _menuTempId: menuData._tempId
-        };
-        subMenuList.push(subMenuData);
+    groupOrderMap.set(menuKey, 0);
+    return menuKey;
+  }
 
-        // 处理 sub_menu 下的 cards
-        for (const card of subMenu.cards || []) {
-          if (card.type === 'card') {
-            cardList.push({
-              ...card,
-              _menuTempId: menuData._tempId,
-              _subMenuTempId: subMenuData._tempId
-            });
-          }
+  /**
+   * 获取或创建分组计划
+   * @param {string} menuKey
+   * @param {string} groupName - 分组名（如 "开发 / 前端"）
+   */
+  function ensureGroup(menuKey, groupName) {
+    const groupKey = `${menuKey}||group:${groupName}`;
+    if (groupKeyMap.has(groupKey)) {
+      return groupKey;
+    }
+
+    // 查找已存在的分组
+    const menuPlan = plan.menus[menuKeyMap.get(menuKey)];
+    const menuId = menuPlan.existingId;
+    let existingId = null;
+    if (menuId && existingGroups.has(String(menuId))) {
+      existingId = existingGroups.get(String(menuId)).get(groupName) || null;
+    }
+
+    const groupPlan = {
+      key: groupKey,
+      menuKey,
+      name: groupName,
+      action: existingId ? 'reuse' : 'create',
+      existingId: existingId || null,
+      order: groupOrderMap.get(menuKey) || 0
+    };
+    groupOrderMap.set(menuKey, (groupOrderMap.get(menuKey) || 0) + 1);
+
+    plan.groups.push(groupPlan);
+    groupKeyMap.set(groupKey, plan.groups.length - 1);
+
+    if (existingId) {
+      plan.stats.groupsToReuse++;
+    } else {
+      plan.stats.groupsToCreate++;
+    }
+
+    cardOrderMap.set(groupKey, 0);
+    return groupKey;
+  }
+
+  /**
+   * 添加书签到计划
+   */
+  function addCard(menuKey, groupKey, title, url) {
+    // 批次内去重
+    const trackKey = `${menuKey}||${groupKey || 'null'}`;
+    if (!urlTracker.has(trackKey)) {
+      urlTracker.set(trackKey, new Set());
+    }
+    if (urlTracker.get(trackKey).has(url)) {
+      plan.stats.cardsToSkip++;
+      return;
+    }
+
+    // 数据库已存在检查
+    const menuPlan = plan.menus[menuKeyMap.get(menuKey)];
+    const menuId = menuPlan.existingId;
+    let groupId = null;
+    if (groupKey) {
+      const groupPlan = plan.groups[groupKeyMap.get(groupKey)];
+      groupId = groupPlan.existingId;
+    }
+
+    const urlSetKey = `${menuId || 'new'}-${groupId || 'null'}`;
+    const existingUrlSet = existingUrls.get(urlSetKey);
+    if (existingUrlSet && existingUrlSet.has(url)) {
+      plan.cards.push({
+        menuKey,
+        groupKey,
+        title,
+        url,
+        action: 'skip',
+        order: cardOrderMap.get(groupKey || menuKey) || 0
+      });
+      plan.stats.cardsToSkip++;
+    } else {
+      plan.cards.push({
+        menuKey,
+        groupKey,
+        title,
+        url,
+        action: 'create',
+        order: cardOrderMap.get(groupKey || menuKey) || 0
+      });
+      plan.stats.cardsToCreate++;
+    }
+
+    cardOrderMap.set(groupKey || menuKey, (cardOrderMap.get(groupKey || menuKey) || 0) + 1);
+    urlTracker.get(trackKey).add(url);
+  }
+
+  // ========== 处理书签 ==========
+
+  if (targetType === 'auto') {
+    // 自动创建模式
+    // 1. 根文件夹 => 菜单
+    // 2. 子文件夹路径 => 分组（用 " / " 拼接）
+    // 3. 根级散书签 => "导入书签" 菜单的默认分组
+
+    for (const bm of bookmarks) {
+      if (bm.rootFolder === null) {
+        // 根级散书签 => "导入书签" 菜单
+        const menuKey = ensureMenu('导入书签');
+        addCard(menuKey, null, bm.title, bm.url);
+      } else {
+        // 有根文件夹
+        const menuKey = ensureMenu(bm.rootFolder);
+
+        if (bm.folderPath.length === 0) {
+          // 直接在根文件夹下，无分组
+          addCard(menuKey, null, bm.title, bm.url);
+        } else {
+          // 有子文件夹路径 => 创建分组
+          const groupName = bm.folderPath.join(' / ');
+          const groupKey = ensureGroup(menuKey, groupName);
+          addCard(menuKey, groupKey, bm.title, bm.url);
+        }
+      }
+    }
+  } else {
+    // 指定栏目模式
+    // 所有书签导入到 targetMenuId
+    // 分组按完整路径创建（包含根文件夹名作为路径首段）
+
+    const menuKey = `menu:${targetMenuName}`;
+    const menuPlan = {
+      key: menuKey,
+      name: targetMenuName,
+      action: 'reuse',
+      existingId: targetMenuId,
+      order: 0
+    };
+    plan.menus.push(menuPlan);
+    menuKeyMap.set(menuKey, 0);
+    plan.stats.menusToReuse++;
+    groupOrderMap.set(menuKey, 0);
+
+    for (const bm of bookmarks) {
+      if (bm.rootFolder === null && bm.folderPath.length === 0) {
+        // 根级散书签 => 默认分组（无分组）
+        addCard(menuKey, null, bm.title, bm.url);
+      } else {
+        // 构建完整路径（根文件夹 + 子路径）
+        const fullPath = bm.rootFolder
+          ? [bm.rootFolder, ...bm.folderPath]
+          : bm.folderPath;
+
+        if (fullPath.length === 0) {
+          addCard(menuKey, null, bm.title, bm.url);
+        } else {
+          const groupName = fullPath.join(' / ');
+          const groupKey = ensureGroup(menuKey, groupName);
+          addCard(menuKey, groupKey, bm.title, bm.url);
         }
       }
     }
   }
 
-  // 处理顶层书签 - 添加到默认栏目
-  if (topLevelCards.length > 0) {
-    const defaultMenu = {
-      name: '导入书签',
-      order: menuList.length,
-      _tempId: `menu_default`
-    };
-    menuList.push(defaultMenu);
-
-    for (const card of topLevelCards) {
-      cardList.push({
-        title: card.title,
-        url: card.url,
-        desc: card.desc || '',
-        order: card.order,
-        _menuTempId: defaultMenu._tempId,
-        _subMenuTempId: null
-      });
-    }
-  }
-
-  return { menuList, subMenuList, cardList };
+  return plan;
 }
