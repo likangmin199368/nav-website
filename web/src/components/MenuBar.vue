@@ -66,6 +66,7 @@ function hideSubMenu(menuId) {
   flex-wrap: wrap;
   padding: 0 1rem;
   position: relative;
+  gap: 0.5rem;  /* 统一菜单项间距 */
 }
 
 .menu-item {
@@ -78,7 +79,7 @@ function hideSubMenu(menuId) {
   color: #fff;
   font-size: 16px;
   font-weight: 500;
-  padding: 0.8rem 2rem;
+  padding: 0.8rem 1.2rem;  /* 减小左右内边距 */
   cursor: pointer;
   transition: all 0.3s ease;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -86,8 +87,6 @@ function hideSubMenu(menuId) {
   border-radius: 8px;
   position: relative;
   overflow: hidden;
-  /* 中英文对齐优化 */
-  min-width: 80px;
   text-align: center;
   white-space: nowrap;
 }
