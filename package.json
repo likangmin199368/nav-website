@@ -1,8 +1,8 @@
 {
-  "name": "nav-item-backend",
+  "name": "nav-website-backend",
   "version": "1.0.0",
-  "author": "eooce",
-  "description": "nav-item-backend",
+  "author": "km4096",
+  "description": "nav-website-backend",
   "repository": "https://github.com/eooce/nav-item",
   "license": "MIT",
   "main": "app.js",

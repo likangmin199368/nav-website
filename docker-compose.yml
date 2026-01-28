@@ -1,9 +1,9 @@
 version: '3'
 
 services:
-  nav-item:
-    image: eooce/nav-item
-    container_name: nav-item
+  nav-website:
+    image: km4096/nav-website
+    container_name: nav-website
     ports:
       - "3000:3000"
     environment:

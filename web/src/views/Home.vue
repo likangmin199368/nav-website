@@ -1,14 +1,14 @@
 <template>
   <div class="home-container">
     <div class="menu-bar-fixed">
-      <MenuBar 
-        :menus="menus" 
-        :activeId="activeMenu?.id" 
+      <MenuBar
+        :menus="menus"
+        :activeId="activeMenu?.id"
         :activeSubMenuId="activeSubMenu?.id"
         @select="selectMenu"
       />
     </div>
-    
+
     <div class="search-section">
       <div class="search-box-wrapper">
         <div class="search-engine-select">
@@ -20,10 +20,10 @@
           </button>
         </div>
         <div class="search-container">
-          <input 
-            v-model="searchQuery" 
-            type="text" 
-            :placeholder="selectedEngine.placeholder" 
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="selectedEngine.placeholder"
             class="search-input"
             @keyup.enter="handleSearch"
           />
@@ -38,7 +38,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 左侧广告条 -->
     <div v-if="leftAds.length" class="ad-space-fixed left-ad-fixed">
       <a v-for="ad in leftAds" :key="ad.id" :href="ad.url" target="_blank">
@@ -51,9 +51,9 @@
         <img :src="ad.img" alt="广告" />
       </a>
     </div>
-    
+
     <CardGrid :cards="filteredCards"/>
-    
+
     <footer class="footer">
       <div class="footer-content">
         <button @click="showFriendLinks = true" class="friend-link-btn">
@@ -63,7 +63,7 @@
           </svg>
           友情链接
         </button>
-        <p class="copyright">Copyright © 2025 Nav-Item | <a href="https://github.com/eooce/Nav-Item" target="_blank" class="footer-link">Powered by eooce</a></p>
+        <p class="copyright">Copyright © 2026 Nav-Website | <a href="https://github.com/eooce/Nav-Item" target="_blank" class="footer-link">Powered by eooce</a></p>
       </div>
     </footer>
 
@@ -80,17 +80,17 @@
         </div>
         <div class="modal-body">
           <div class="friend-links-grid">
-            <a 
-              v-for="friend in friendLinks" 
-              :key="friend.id" 
-              :href="friend.url" 
-              target="_blank" 
+            <a
+              v-for="friend in friendLinks"
+              :key="friend.id"
+              :href="friend.url"
+              target="_blank"
               class="friend-link-card"
             >
               <div class="friend-link-logo">
-                <img 
-                  v-if="friend.logo" 
-                  :src="friend.logo" 
+                <img
+                  v-if="friend.logo"
+                  :src="friend.logo"
                   :alt="friend.title"
                   @error="handleLogoError"
                 />
@@ -170,7 +170,7 @@ function clearSearch() {
 
 const filteredCards = computed(() => {
   if (!searchQuery.value) return cards.value;
-  return cards.value.filter(card => 
+  return cards.value.filter(card =>
     card.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
     card.url.toLowerCase().includes(searchQuery.value.toLowerCase())
   );
@@ -187,7 +187,7 @@ onMounted(async () => {
   const adRes = await getAds();
   leftAds.value = adRes.data.filter(ad => ad.position === 'left');
   rightAds.value = adRes.data.filter(ad => ad.position === 'right');
-  
+
   const friendRes = await getFriends();
   friendLinks.value = friendRes.data;
 });
@@ -350,7 +350,7 @@ function handleLogoError(event) {
   flex-direction: column;
   /* padding: 1rem 1rem; */
   position: relative;
-  padding-top: 50px; 
+  padding-top: 50px;
 }
 
 .home-container::before {
@@ -679,12 +679,12 @@ function handleLogoError(event) {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .ad-space {
     width: 100%;
     height: 100px;
   }
-  
+
   .ad-placeholder {
     height: 80px;
   }
@@ -694,15 +694,15 @@ function handleLogoError(event) {
   .home-container {
     padding-top: 80px;
   }
-  
+
   .content-wrapper {
     gap: 0.5rem;
   }
-  
+
   .ad-space {
     height: 60px;
   }
-  
+
   .ad-placeholder {
     height: 50px;
     font-size: 12px;
@@ -736,4 +736,4 @@ function handleLogoError(event) {
     gap: 20px;
   }
 }
-</style> 
+</style>
