@@ -32,7 +32,7 @@
       </div>
     </div>
   </div>
-  
+
   <div v-else class="admin-layout">
     <aside class="admin-sider" :class="{ open: siderOpen }" @click.self="closeSider">
       <div class="logo clickable" @click="page='welcome'; closeSider()">Admin</div>
@@ -59,7 +59,7 @@
       </div>
       <div class="admin-content">
         <div v-if="page==='welcome'" class="welcome-page">
-          <h2 class="welcome-title">欢迎您进入 Nav-Item 后台管理系统</h2>
+          <h2 class="welcome-title">欢迎您进入 Nav-Website 后台管理系统</h2>
           <div class="welcome-cards">
             <div class="welcome-card">
               <div class="welcome-icon time-icon">
@@ -84,7 +84,7 @@
         <UserManage v-if="page==='user'" />
       </div>
       <footer class="admin-footer">
-        <p class="admin-copyright">Copyright © 2025 Nav-Item | <a href="https://github.com/eooce/Nav-Item" target="_blank" class="footer-link">Powered by eooce</a></p>
+        <p class="admin-copyright">Copyright © 2026 Nav-Website | <a href="https://github.com/likangmin199368/nav-website" target="_blank" class="footer-link">Powered by KM</a></p>
       </footer>
     </main>
   </div>
@@ -147,10 +147,10 @@ async function handleLogin() {
     loginError.value = '请输入用户名和密码';
     return;
   }
-  
+
   loading.value = true;
   loginError.value = '';
-  
+
   try {
     const response = await login(username.value, password.value);
     if (response.data.token) {
@@ -615,4 +615,4 @@ function closeSider() {
 .menu-toggle {
   display: none;
 }
-</style> 
+</style>
